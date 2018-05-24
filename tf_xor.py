@@ -1,3 +1,6 @@
+#!/usr/bin/python3
+# -*- coding:utf-8 -*-
+# author: zhaofeng-shu33
 import tensorflow as tf
 import numpy as np
 import pdb
