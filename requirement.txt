@@ -1,0 +1,70 @@
+Task 1:  XOR Problem
+
+
+
+Implement BP algorithm and apply it to the XOR problem.
+
+
+
+Input    Output
+
+0 0         0
+
+0 1         1
+
+1 0         1
+
+1 1         0
+
+
+
+Objectives: 
+1) Understand the details of BP algorithm; 
+2) Understand the impact of various algorithm parameter settings; 
+3) Understand the structure of the 2-2-1 feedforward network.
+
+
+
+You should demonstrate the convergence of the networks under different settings and give a detailed analysis on how the trained network can solve this nonlinearly seperable probelm.
+
+
+
+You need to code the BP algorithm by yourself for this assignment.
+
+
+
+Task 2: Identity Function
+
+
+
+Use the above implemented BP algorithm (with possible small changes) to solve the identity function problem in which the input is identical to the output.
+
+
+
+The network has 8 input units, 3 hidden units and 8 output units.
+
+
+
+There are 8 training samples and each one contains exactly seven 0s and a single 1.
+
+
+
+For example:
+
+
+
+Input                  Output
+
+
+
+00010000        00010000
+
+00000001        00000001
+
+
+
+Objectives: 1) Train a network that can realize this identical mapping; 2) Understand the functionality of the 3 hidden units.
+
+
+
+Hint: It is actually an 8-3-8 encoder&decoder. Try to discover the output pattern of the hidden units with regard to different input samples.
