@@ -1,0 +1,205 @@
+\documentclass{ctexart}
+\usepackage{amsmath}
+\usepackage{amsfonts,amssymb}
+\usepackage{multirow}
+\usepackage[bottom]{footmisc}
+
+\title{两层神经网络实现报告}
+\author{赵丰}
+\begin{document}
+\maketitle
+\section{概要}
+\begin{enumerate}
+\item 复现了两层神经网络，与Tensorflow 结果进行对比
+\item BP公式推导
+\item 用两个简单的例子进行实验
+\end{enumerate}
+\section{两层神经网络}
+设 $x$ 是网络输入， $ \hat{y}$ 是后验概率输出。
+    \begin{align*}
+   o_1 & = w_1 x + b_1 \\
+    \hat{o}_1 & = \tanh(o_1) \\
+    o_2 & = w_2 \hat{o}_1 + b_2 \\    
+    \hat{y} & = \sigma(o_2)    
+    \end{align*}
+    其中$w_1, w_2 $是矩阵， $b_1, b_2$是列向量，$\sigma $ 是一个向量值的标量函数。
+    我们采用如下两个约定：
+    \begin{itemize}
+   \item  一元函数 如$\tanh,\log $等作用于向量或矩阵是 \texttt{elementwise} 作用的。
+   比如 $\tanh([a_1, a_2] = [\tanh a_1, \tanh a_2])$
+   \item 标量函数对矩阵（或向量）求导数得到的矩阵（或向量）行数列数均不变。
+   比如 $ \frac{\partial}{\partial x} ( x^T A x )= Ax $，其中 $x$ 是列向量， $A$ 是方阵。
+    \end{itemize}
+    设在一次训练中一个\texttt{batch} 有 $x_1, x_2, \dots, x_N$ 共$N$个向量（均为列向量），分别对应$y_1, y_2, \dots, y_N$共 $N$
+    个数。
+    我们采用如下三组记号:
+    \begin{subequations}
+    \begin{align}
+       o_1(i) & = w_1 x_i + b_1 \\
+        \hat{o}_1(i) & = \tanh(o_1(i)) \\
+        o_2(i) & = w_2 \hat{o}_1(i) + b_2 
+    \end{align}
+    \begin{align}
+        X & = [x_1, x_2, \dots, x_N] && m \times N\\
+        Y & = [y_1, y_2, \dots, y_N] && 1 \times N\\            
+o_1 & = [o_1(1), o_1(2), \dots, o_1(N)] && K \times N\\
+    \hat{o}_1 & = [\hat{o}_1(1), \hat{o}_1(2), \dots, \hat{o}_1(N)] && K \times N\\
+ \label{eq:o2}   o_2 & = [o_2(1), o_2(2), \dots, o_2(N)]
+    \end{align}
+    \begin{align}
+        \hat{y}_i & = \sigma(o_2)  \\
+        \hat{Y} & = [\hat{y}_1, \hat{y}_2, \dots, \hat{y}_N]
+    \end{align}
+\end{subequations}
+损失函数采用 Cross Entropy。 
+设 $ x \in \mathbb{R}^m$, 神经网络有 $K$ 个 hidden units，则 $w_1$ 是 $ K \times m$ 的矩阵.
+\subsection{1维输出情形}
+    当 网络输出只有1维时，
+     $w_2$ 是行向量， $b_2$ 是一个数，$\sigma$取为 \texttt{sigmoid} 函数。即
+    \begin{equation}\label{eq:sigmoid}
+    \sigma(x) = \frac{1}{1+e^{-x}}
+    \end{equation}
+    此时 $\hat{y}_i = \sigma(o_2(i))$，
+    输出的$\hat{y}$ 表示$ Y = 1$ 的概率， $ 1 - \hat{y} $ 表示 $ Y = 0$ 
+    的概率（$Y$ 的字母表即为 $\{0, 1\}$）。
+    此时损失函数的具体表达式为：
+    \begin{equation}\label{eq:Loss_sigmoid}
+      \mathcal{L} = -\frac{1}{N} \sum_{i=1}^N\left(y_i\log \hat{y}_i + (1-y_i) \log (1  - \hat{y}_i) \right)
+    \end{equation}
+    其中 $N$ 为训练的样本个数。
+
+
+代入~\eqref{eq:sigmoid} 到~\eqref{eq:Loss_sigmoid} 式中得
+\begin{align}
+\label{eq:loss_1}\mathcal{L} & = \frac{1}{N}\sum_{i=1}^N(\log (1+e^{-o_2(i)}) +(1-y_i)o_2(i)) \\
+ &\Rightarrow 
+\frac{\partial \mathcal{L}}{\partial o_2(i)}
+= \frac{1}{N} (-\frac{1}{ e^{ o_2(i) } + 1 } + (1-y_i)) \\
+&\Rightarrow  
+\frac{\partial \mathcal{L}}{\partial b_2}
+= \sum_{i=1}^N \frac{\partial \mathcal{L}}{\partial o_2(i)} \frac{\partial o_2(i)}{\partial b_2} \\
+& = \frac{1}{N} \sum_{ i = 1 }^N (-\frac{1}{ e^{ o_2(i) } + 1 } + (1-y_i)) 
+\end{align}
+记行向量 $s$ 与标签行向量 $y$ 具有相同的维数， 且 $ s_i = -\frac{1}{ e^{ o_2(i) } + 1 } + (1-y_i) $
+于是 损失函数对 $b_2 $ 的导数可看作对 $s$ 的平均。
+
+从~\eqref{eq:loss_1} 式出发我们进一步求损失函数对 $w_2$的导数，
+\begin{align*}
+\frac{\partial \mathcal{L}}{\partial w_2(j)}  & =  \sum_{i=1}^N \frac{\partial \mathcal{L}}{\partial o_2(i)} \frac{\partial o_2(i)}{\partial w_2(j)} \\
+& =  \sum_{i=1}^N \frac{\partial \mathcal{L}}{\partial o_2(i)} \hat{o}_1(j,i) \\
+& = {1\over N} \sum_{i=1}^N s_i \hat{o}_1(j,i)\footnotemark \\
+& ={1\over N} (s \hat{o}_1^T)(j) \\
+& \Rightarrow \frac{\partial \mathcal{L}}{\partial w_2} ={1\over N} (s \hat{o}_1^T)
+\end{align*}
+\footnotetext{表示 $\hat{o}_1 $ 的第 $j$ 行，第 $i$ 列的元素}
+我们得到了如下的结果：
+\begin{align}
+  	s & = -\frac{1}{ e^{ o_2} + 1 } + (1-y)  \\
+   \label{eq:one_b_2} \frac{\partial \mathcal{L}}{\partial b_2} & = \mathtt{mean}(s)\\
+   \label{eq:one_w_2} \frac{\partial \mathcal{L}}{\partial w_2}  & = {1\over N} (s \hat{o}_1^T)
+\end{align}
+接下来处理第一层，
+\begin{align*}
+\frac{\partial \mathcal{L}}{\partial \hat{o}_1(j,i)} & = \frac{\partial \mathcal{L}}{\partial o_2(i)}
+\frac{\partial o_2(i)}{\partial \hat{o}_1(j,i)} \\
+& = {1\over N} s_i w_2(j) \\
+& \Rightarrow  \frac{\partial \mathcal{L}}{\partial \hat{o}_1(i)} = {1\over N} s_i w_2^T
+\end{align*}
+\begin{align*}
+\frac{\partial \mathcal{L}}{\partial b_1(j)}
+& = \sum_{i=1}^N \frac{\partial \mathcal{L}}{\partial \hat{o}_1(i)} \cdot \frac{\partial \hat{o}_1(i)}{\partial b_1(j)} \footnotemark\\
+& ={1\over N} \sum_{i=1}^N s_i \sum_{k=1}^K w_2(k) \frac{\partial \hat{o}_1(k,i)}{\partial b_1(j)} \\
+& ={1\over N} \sum_{i=1}^N \frac{ s_i}{\cosh^2 o_1(j,i)} w_2(j) \\
+& = \mathtt{mean}({w_2^T s \over {  \cosh^2 o_1}}, \mathtt{rowwise})
+\end{align*}
+\footnotetext{两个列向量的内积}
+上式最后一个等式指对 $ K \times N$ 的矩阵每一行取平均， 得到列向量 $b_1$。
+\begin{align*}
+    \frac{\partial \mathcal{L}}{\partial w_1(i,j)}
+    & = \sum_{k=1}^N \frac{\partial \mathcal{L}}{\partial \hat{o}_1(k)} \cdot \frac{\partial \hat{o}_1(k)}{\partial w_1(i,j)} \\
+    & ={1 \over N} \sum_{k=1}^N  s_k \sum_{r=1}^K w_2(r)
+    \frac{\partial \hat{o}_1(r,k)}{\partial w_1(i,j)} \\    
+    & = { 1 \over N}\sum_{k=1}^N  \frac{s_k w_2(i)}{\cosh^2 o_1(i,k)}
+    X(i,k) \\        
+    & = {1 \over N} {w_2^T s \over {  \cosh^2 o_1} } X^T
+\end{align*}
+整理有如下的结果：
+\begin{align}
+    f & = {w_2^T s \over {\cosh^2 o_1} } && K \times N \\
+  \label{eq:one_b_1}  \frac{\partial \mathcal{L}}{\partial b_1} & = \mathtt{mean}(f, \mathtt{rowwise}) \\
+  \label{eq:one_w_1}   \frac{\partial \mathcal{L}}{\partial w_1}& = {1 \over N} f X^T && K \times m 
+\end{align}
+
+
+\section{多维输出的情形}
+当网络输出为多维($J$维，$J\geq 2$)时，采用 \texttt{softmax} 输出后验概率：
+\begin{equation}\label{eq:multi_y_i}
+\hat{y}_i(r) = \frac{e^{o_2(r,i)}}{\sum_{k=1}^J e^{o_2(k,i)}}, r=1, 2, \dots J
+\end{equation}
+其中 $J$也为输出层的维数，则 $w_2, o_2$ 是 $J\times K $ 维的矩阵， $ b_2 $ 是$J$维的列向量。
+$Y \in \{1, 2, \dots, J\}$（这里假设元素下标从1开始）。
+
+则损失函数为
+\begin{equation}\label{eq:multi_loss}
+    \mathcal{L} = -{1 \over N} \sum_{i=1}^N \log  \hat{y}_i(y_i)
+\end{equation}
+将~\eqref{eq:multi_y_i} 代入损失函数~\eqref{eq:multi_loss} 式中得：
+记 $ t_i =  \sum_{k=1}^J e^{o_2(k,i)}, t=[t_1, t_2, \dots, t_N] $
+
+\begin{equation}
+\mathcal{L}  = -{1 \over N} \sum_{i=1}^N (o_2(y_i, i) + \log t_i )
+\end{equation}
+$\mathcal{L}$ 对 $o_2(r,i)$ 求导得：
+\begin{align}
+\frac{ \partial \mathcal{L}}{\partial o_2(r,i)} & = - {1 \over N}(\delta_{r,y_i} + \hat{y}_i(r) )
+\end{align}
+设 $ s(r,i) = \delta_{r,y_i} + \hat{y}_i(r)  $ , $s $ 为$J \times N$维的矩阵，则类似于
+~\eqref{eq:one_b_2} 我们有
+\begin{align}
+\frac{\partial \mathcal{L}}{\partial b_2} & = \mathtt{mean}(s, \mathtt{rowwise})
+\end{align}
+$w_2,w_1,b_1$的表达式与~\eqref{eq:one_w_2}式、~\eqref{eq:one_b_1}、~\eqref{eq:one_w_2}相同。
+\section{实现}
+见\texttt{neural\_net\_cross\_entropy.py}。
+公式推导是在实现后加的。编程实现中存在下标从零开始，一阶张量和二阶张量维数不同做运算要用点积等问题，这和推导中下标从1开始，尽量使用矩阵运算的 convention 不太一样，但基本思路是一样的。
+在实现中仍存在很多可以改进的地方：
+\begin{itemize}
+\item 激活函数需要手动改代码调整
+\item 目前C++实现只支持单层输出、动态矩阵。
+使用类模板写Two\_Layer\_Net 类可以使得声明的矩阵维数是指定的，便于阅读，效率也更高。
+\item 增加 momentum 功能。
+\end{itemize}
+\section{XOR问题求解}
+训练数据如表~\ref{tab}所示：
+    \begin{table}[!ht]
+        \centering
+        \begin{tabular}{|cc|c|}
+            \hline
+            \multicolumn{2}{|c|}{X}  & Y \\
+            \hline
+            0 & 0 & 0 \\
+            1 & 1 & 0 \\
+            0 & 1 & 1 \\
+            1 & 0 & 1 \\
+            \hline
+        \end{tabular}
+   \caption{XOR问题训练集}\label{tab}
+    \end{table}    
+采用 2-2-1 的两层神经网络求解，实验中发现并不是每次迭代都可以达到100\%正确率。
+\section{自动编码问题求解}
+将原始数据每次1个byte 8位输入自动编码机，输出是3bit的压缩数据，再每3bit输入到自动解码机。
+输出原来的8位数据，构成8-3-8的两层神经网络（最后一层使用 \texttt{sigmoid} 函数将每个分量的输出归一化到 $[0,1] $），实现 identity mapping。理想化的情况是该组合的网络输入与输出完全相同。但根据信息论的原理，不可能实现无损数据压缩。我们根据现有的神经网络框架在$1, 2,4,\dots,128$（十进制） 8个数据训练简单了两层神经网络，在$0~255$的8位数据上进行预测，用是否大于0.5将神经网络的输出结果二值化为0或1。预测结果如下表~\ref{encoder}所示。
+
+\begin{table}[!ht]
+\centering
+\begin{tabular}{*{10}{c}}
+\hline
+& 无差错 & 1位错 & 2位错 & 3位错 & 4位错 & 5位错 & 6位错 & 7位错 & 8位错 \\
+\hline
+个数 &15 &  21 & 43 & 77 & 47 & 36 & 15 &  2 & 0 \\
+\hline
+\end{tabular}
+\caption{译码器预测结果}\label{encoder}
+\end{table}
+
+\end{document}

@@ -1,67 +1,61 @@
-#!/usr/bin/python
-# -*- coding:utf-8 -*-
-# author: Stanford cs231n 2016 winter assignment teaching-assistant, Justin Johnson
+/**
+ author: Stanford cs231n 2016 winter assignment teaching-assistant, Justin Johnson
 # modified by zhaofeng-shu33
-import numpy as np
-import matplotlib.pyplot as plt
-import pdb
-def rel_error(x, y):
-  """ returns relative error """
-  return np.max(np.abs(x - y) / (np.maximum(1e-8, np.abs(x) + np.abs(y))))
+# file-description: implementation of a two-layer neural-network with cross-entropy loss
+# the first layer uses tanh as activation function
+# the second layer uses sigmoid(for binary classification) or sofmax(for multiclass classification) activation function
+**/
+#include <iostream>
+#include <Eigen/Dense>
+typedef Number double
+// def rel_error(x, y):
+//   """ returns relative error """
+//   return np.max(np.abs(x - y) / (np.maximum(1e-8, np.abs(x) + np.abs(y))))
 
-def eval_numerical_gradient(f, x, verbose=True, h=0.00001):
-  """ 
-  a naive implementation of numerical gradient of f at x 
-  - f should be a function that takes a single argument
-  - x is the point (numpy array) to evaluate the gradient at
-  """ 
+// def eval_numerical_gradient(f, x, verbose=True, h=0.00001):
+//   """ 
+//   a naive implementation of numerical gradient of f at x 
+//   - f should be a function that takes a single argument
+//   - x is the point (numpy array) to evaluate the gradient at
+//   """ 
 
-  fx = f(x) # evaluate function value at original point
-  grad = np.zeros_like(x)
-  # iterate over all indexes in x
-  it = np.nditer(x, flags=['multi_index'], op_flags=['readwrite'])
-  while not it.finished:
+//   fx = f(x) # evaluate function value at original point
+//   grad = np.zeros_like(x)
+//   # iterate over all indexes in x
+//   it = np.nditer(x, flags=['multi_index'], op_flags=['readwrite'])
+//   while not it.finished:
 
-    # evaluate function at x+h
-    ix = it.multi_index
-    oldval = x[ix]
-    x[ix] = oldval + h # increment by h
-    fxph = f(x) # evalute f(x + h)
-    x[ix] = oldval - h
-    fxmh = f(x) # evaluate f(x - h)
-    x[ix] = oldval # restore
+//     # evaluate function at x+h
+//     ix = it.multi_index
+//     oldval = x[ix]
+//     x[ix] = oldval + h # increment by h
+//     fxph = f(x) # evalute f(x + h)
+//     x[ix] = oldval - h
+//     fxmh = f(x) # evaluate f(x - h)
+//     x[ix] = oldval # restore
 
-    # compute the partial derivative with centered formula
-    grad[ix] = (fxph - fxmh) / (2 * h) # the slope
-    if verbose:
-      print(ix, grad[ix])
-    it.iternext() # step to next dimension
+//     # compute the partial derivative with centered formula
+//     grad[ix] = (fxph - fxmh) / (2 * h) # the slope
+//     if verbose:
+//       print(ix, grad[ix])
+//     it.iternext() # step to next dimension
 
-  return grad
-def report_gradient(net, X, y):
-  loss, grads = net.loss(X, y, reg=0.1)
+//   return grad
+// def report_gradient(net, X, y):
+//   loss, grads = net.loss(X, y, reg=0.1)
 
-  # these should all be less than 1e-8 or so
-  for param_name in grads:
-    f = lambda W: net.loss(X, y, reg=0.1)[0]
-    param_grad_num = eval_numerical_gradient(f, net.params[param_name], verbose=False)
-    print('%s max relative error: %e' % (param_name, rel_error(param_grad_num, grads[param_name])))
+//   # these should all be less than 1e-8 or so
+//   for param_name in grads:
+//     f = lambda W: net.loss(X, y, reg=0.1)[0]
+//     param_grad_num = eval_numerical_gradient(f, net.params[param_name], verbose=False)
+//     print('%s max relative error: %e' % (param_name, rel_error(param_grad_num, grads[param_name])))
 
-class TwoLayerNet(object):
-  """
-  A two-layer fully-connected neural network. The net has an input dimension of
-  N, a hidden layer dimension of H, and performs classification over C classes.
-  We train the network with a softmax loss function and L2 regularization on the
-  weight matrices. The network uses a ReLU nonlinearity after the first fully
-  connected layer.
-
-  In other words, the network has the following architecture:
-
-  input - fully connected layer - ReLU - fully connected layer - softmax
-
-  The outputs of the second fully-connected layer are the scores for each class.
-  """
-
+class TwoLayerNet {
+    MatrixXf W1;
+    MatrixXf W2;
+    MatrixXf b1;
+    MatrixXf b2;    
+};
   def __init__(self, input_size, hidden_size, output_size, std=1e-4):
     """
     Initialize the model. Weights are initialized to small random values and
@@ -143,7 +137,7 @@ class TwoLayerNet(object):
     # classifier loss. So that your results match ours, multiply the            #
     # regularization loss by 0.5                                                #
     #############################################################################
-    if(len(self.params['b2'])>1): # use softmax function as activation
+    if(max(self.params['b2'].shape)>1): # use softmax function as activation
       forward_g=np.exp(scores)
       forward_h=np.sum(forward_g,axis=1)    
       L_loss=-1*scores[list(range(len(y))),y]+np.log(forward_h)
@@ -159,7 +153,7 @@ class TwoLayerNet(object):
     # Backward pass: compute gradients
     grads = {}
     backward_score=np.zeros(scores.shape)          
-    if(len(self.params['b2'])>1):
+    if(max(self.params['b2'].shape)>1):
       backward_score[list(range(len(y))),y]=-1
       backward_score+=forward_g/np.transpose(forward_h+np.zeros([len(b2),1]))
     else:
@@ -188,7 +182,7 @@ class TwoLayerNet(object):
   def train(self, X, y, X_val, y_val,
             learning_rate=1e-3, learning_rate_decay=0.95,
             reg=1e-5, num_iters=100,
-            batch_size=200, verbose=False):
+            batch_size=200, verbose=False, record_history = True):
     """
     Train this neural network using stochastic gradient descent.
 
@@ -205,6 +199,7 @@ class TwoLayerNet(object):
     - num_iters: Number of steps to take when optimizing.
     - batch_size: Number of training examples to use per step.
     - verbose: boolean; if true print progress during optimization.
+    - record_history: boolean; if true return the history object.
     """
     num_train = X.shape[0]
 
@@ -251,7 +246,7 @@ class TwoLayerNet(object):
         print('iteration %d / %d: loss %f' % (it, num_iters, loss))
 
       # Every epoch, check train and val accuracy and decay learning rate.
-      if it % iterations_per_epoch == 0:
+      if record_history and it % iterations_per_epoch == 0:
         # Check accuracy
         train_acc = (self.predict(X_batch) == y_batch).mean()
         val_acc = (self.predict(X_val) == y_val).mean()
@@ -260,12 +255,15 @@ class TwoLayerNet(object):
 
         # Decay learning rate
         learning_rate *= learning_rate_decay
-
-    return {
-      'loss_history': loss_history,
-      'train_acc_history': train_acc_history,
-      'val_acc_history': val_acc_history,
-    }
+    if record_history:
+      return {
+        'loss_history': loss_history,
+        'train_acc_history': train_acc_history,
+        'val_acc_history': val_acc_history,
+      }
+    else:
+      return
+  
   def _relu(self, X):
     return np.maximum(X, 0)
   def _tanh(self, X):
@@ -273,7 +271,24 @@ class TwoLayerNet(object):
   def _softmax(self, X):
     tmp=np.exp(X)
     return tmp/sum(tmp)
-  
+  def _sigmoid(self, X):
+    return 1/(1+ np.exp(-X))
+  def _forward(self, X):
+    """
+    Forward propogation.
+    """
+    first_layer_output=np.dot(X,self.params['W1'])+self.params['b1']
+    activated_result=self._tanh(first_layer_output)
+    second_layer_output=np.dot(activated_result,self.params['W2'])+self.params['b2']
+    output = None
+    if((max(self.params['b2'].shape))>1):
+      softmax_output = self._softmax(second_layer_output)
+      output = softmax_output
+    else:
+      sigmoid_output = self._sigmoid(second_layer_output)
+      output = sigmoid_output
+    return output
+
   def predict(self, X):
     """
     Use the trained weights of this two-layer network to predict labels for
@@ -290,27 +305,29 @@ class TwoLayerNet(object):
       to have class c, where 0 <= c < C.
     """
     y_pred = None
-
-    ###########################################################################
-    # TODO: Implement this function; it should be VERY simple!                #
-    ###########################################################################
-    first_layer_output=np.dot(X,self.params['W1'])+self.params['b1']
-    activated_result=self._tanh(first_layer_output)
-    second_layer_output=np.dot(activated_result,self.params['W2'])+self.params['b2']
-    if(len(self.params['b2'])>1):
-      softmax_output = self._softmax(second_layer_output)
-      y_pred = np.argmax(softmax_output,axis=1)
+    output = self._forward(X)
+    if((max(self.params['b2'].shape))>1):
+      y_pred = np.argmax(output,axis=1)
     else:
-      sigmoid_output = 1/(1+ np.exp(-second_layer_output))
-      y_pred = sigmoid_output.reshape(len(sigmoid_output)) > 0.5
-    
-    ###########################################################################
-    #                              END OF YOUR CODE                           #
-    ###########################################################################
-
+      y_pred = output > 0.5
+      y_pred = y_pred.reshape(max(y_pred.shape))
     return y_pred
 
-if __name__ == '__main__':
+def int2bin(i):
+    if i == 0: return np.array([0,0,0,0,0,0,0,0])
+    s = []
+    cnt = 0
+    while i:
+        s.append(i & 1)
+        cnt += 1
+        i = int(i/2)
+    bin_array = np.zeros(8)
+    s.reverse()
+    bin_array[(8-len(s)):8] = s
+    return bin_array
+
+int main(){
+  // for task 1, xor problem
   X = np.array([0,0,1,1,0,1,1,0]).reshape(4,2)
   Y = np.array([0,0,1,1])
   b = TwoLayerNet(2,2,1, std =1.0)
@@ -324,3 +341,15 @@ if __name__ == '__main__':
   print(history)
   print([b.loss(X,Y)[0], (b.predict(X) == Y).mean()])
     
+  // for task 2, identity function
+  X = np.eye(8)
+  Y = np.arange(8)
+  b = TwoLayerNet(8,3,8, std = 1.0)
+  X_eval = np.zeros([256, 8])
+  for i in range(256):
+      X_eval[i,:] = int2bin(i)
+  b.train(X,Y,X,Y,learning_rate=1e-2, 
+  num_iters=1000, reg=1e-5, batch_size = 4, record_history = False)
+  print([b.loss(X,Y)[0], (b.predict(X) == Y).mean()])
+  print('identity function error %f' % np.mean(np.abs(X_eval - b._forward(X_eval) )))
+}
